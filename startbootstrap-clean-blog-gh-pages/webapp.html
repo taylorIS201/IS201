@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        body {
+            font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            flex-direction: column;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #45a09a;
+        }
+        #game {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid #333;
+            font-size: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .cell:active {
+            background-color: #ddd;
+        }
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .winner {
+            color: green;
+        }
+        .game-over {
+            color: red;
+        }
+        #play-again-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #45a09a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none; /* Hide the button initially */
+            margin-top: 10px;
+        }
+        #play-again-btn:hover {
+            background-color: #45a09ad6;
+        }
+        #go-to-page-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #45a09a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #go-to-page-btn:hover {
+            background-color: #45a09abe;
+        }
+        #instructions {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Let's play Tic-Tac-Toe!</h1>
+
+<div id="instructions">
+    <p>Welcome to Tic-Tac-Toe! You are playing as "X" and the computer is "O".</p>
+    <p>Your goal is to place three of your marks in a row, either horizontally, vertically, or diagonally.</p>
+    <p>Click on any empty cell to make your move. The computer will play after you.</p>
+    <p>Have fun and good luck!</p>
+</div>
+
+<div id="game"></div>
+<div class="status" id="status">
+    <br> <!-- Added break line here -->
+    Your turn!
+</div>
+<button id="play-again-btn" onclick="resetGame()">Play Again</button>
+<button id="go-to-page-btn" onclick="goToPage()">Go to Adventure Page</button>
+
+<script>
+    const board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+    ];
+    let currentPlayer = 'X'; // 'X' starts first
+    let gameOver = false;
+
+    const gameContainer = document.getElementById('game');
+    const statusDiv = document.getElementById('status');
+    const playAgainButton = document.getElementById('play-again-btn');
+    const goToPageButton = document.getElementById('go-to-page-btn');
+    const instructionsDiv = document.getElementById('instructions');
+
+    function createBoard() {
+        gameContainer.innerHTML = '';
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                cell.addEventListener('click', handleCellClick);
+                gameContainer.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(event) {
+        if (gameOver) return;
+
+        const cell = event.target;
+        const row = cell.dataset.row;
+        const col = cell.dataset.col;
+
+        // If the cell is already taken, do nothing
+        if (board[row][col] !== '') return;
+
+        // Mark the cell with the current player's symbol
+        board[row][col] = currentPlayer;
+        cell.textContent = currentPlayer;
+
+        if (checkWinner(currentPlayer)) {
+            if (currentPlayer === 'X') {
+                statusDiv.textContent = "You won!";
+            } else {
+                statusDiv.textContent = "Computer wins!";
+            }
+            statusDiv.classList.add('winner');
+            gameOver = true;
+            playAgainButton.style.display = 'inline-block'; // Show the Play Again button
+            return;
+        }
+
+        if (isBoardFull()) {
+            statusDiv.textContent = "Draw!";
+            statusDiv.classList.add('game-over');
+            gameOver = true;
+            playAgainButton.style.display = 'inline-block'; // Show the Play Again button
+            return;
+        }
+
+        // Switch to the other player
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        statusDiv.textContent = `${currentPlayer}'s turn`;
+
+        // If it's the computer's turn, let it play
+        if (currentPlayer === 'O' && !gameOver) {
+            computerPlay();
+        }
+    }
+
+    function computerPlay() {
+        const bestMove = getBestMove();
+        const [row, col] = bestMove;
+        board[row][col] = 'O';
+        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        cell.textContent = 'O';
+
+        if (checkWinner('O')) {
+            statusDiv.textContent = 'Computer wins!';
+            statusDiv.classList.add('winner');
+            gameOver = true;
+            playAgainButton.style.display = 'inline-block'; // Show the Play Again button
+            return;
+        }
+
+        // Switch back to player X
+        currentPlayer = 'X';
+        statusDiv.textContent = "Your turn!";
+    }
+
+    function getBestMove() {
+        // Try to block player from winning, then try to win
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                if (board[row][col] === '') {
+                    // Try to block the player from winning
+                    board[row][col] = 'O';
+                    if (checkWinner('O')) {
+                        return [row, col]; // Block the win
+                    }
+                    board[row][col] = ''; // Reset the cell
+
+                    // Try to make a move that wins
+                    board[row][col] = 'O';
+                    if (checkWinner('O')) {
+                        return [row, col]; // Winning move
+                    }
+                    board[row][col] = ''; // Reset the cell
+                }
+            }
+        }
+
+        // If no winning or blocking move, pick a random move
+        const availableCells = [];
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                if (board[row][col] === '') {
+                    availableCells.push([row, col]);
+                }
+            }
+        }
+
+        return availableCells[Math.floor(Math.random() * availableCells.length)];
+    }
+
+    function checkWinner(player) {
+        // Check rows, columns, and diagonals
+        for (let i = 0; i < 3; i++) {
+            if (board[i][0] === player && board[i][1] === player && board[i][2] === player) {
+                return true; // Row win
+            }
+            if (board[0][i] === player && board[1][i] === player && board[2][i] === player) {
+                return true; // Column win
+            }
+        }
+
+        if (board[0][0] === player && board[1][1] === player && board[2][2] === player) {
+            return true; // Diagonal win
+        }
+
+        if (board[0][2] === player && board[1][1] === player && board[2][0] === player) {
+            return true; // Diagonal win
+        }
+
+        return false;
+    }
+
+    function isBoardFull() {
+        // Check if the board is full
+        return board.every(row => row.every(cell => cell !== ''));
+    }
+
+    function resetGame() {
+        // Reset the board and variables
+        board.forEach(row => row.fill(''));
+        currentPlayer = 'X';
+        gameOver = false;
+        statusDiv.textContent = "Your turn!";
+        statusDiv.classList.remove('winner', 'game-over');
+        playAgainButton.style.display = 'none';
+        instructionsDiv.style.display = 'none'; // Hide instructions when game starts
+
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(cell => cell.textContent = '');
+    }
+
+    function goToPage() {
+        // Modify this URL to navigate to another page
+        window.location.href = "scratch.html"; // Replace with your desired URL
+    }
+
+    createBoard();
+</script>
+
+</body>
+</html>
+
